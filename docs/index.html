@@ -32,7 +32,7 @@
         <div class="hero-copy">
           <div class="eyebrow"><span></span> Authorization mutation testing for Node.js</div>
           <h1>Break authorization.<br><em>Prove your tests care.</em></h1>
-          <p class="hero-lede">AuthFault flips real allow and deny decisions during tests—then shows which broken checks your suite failed to catch.</p>
+          <p class="hero-lede">AuthFault checks whether your application actually obeys its authorization decisions—by deliberately changing them during tests.</p>
           <div class="hero-actions">
             <a class="button primary" href="#quickstart">Run your first fault <span aria-hidden="true">→</span></a>
             <a class="button secondary" href="https://github.com/kraftaa/authfault">View on GitHub</a>
@@ -52,17 +52,17 @@
               <span class="terminal-status">● complete</span>
             </div>
             <div class="terminal-body">
-              <div class="command"><span>$</span> npx authfault -- node --test</div>
+              <div class="command"><span>$</span> npx authfault</div>
               <div class="report-title">Authorization fault-injection report</div>
               <div class="report-block">
                 <div class="report-name">project.secure-delete</div>
-                <div class="mutant"><span class="status killed">KILLED</span><span>allow → deny</span><small>tests failed as expected</small></div>
-                <div class="mutant"><span class="status killed">KILLED</span><span>deny → allow</span><small>tests failed as expected</small></div>
+                <div class="mutant"><span class="status killed">PROTECTED</span><span>allow → deny</span><small>tests failed as expected</small></div>
+                <div class="mutant"><span class="status killed">PROTECTED</span><span>deny → allow</span><small>tests failed as expected</small></div>
               </div>
               <div class="report-block danger-block">
                 <div class="report-name">project.ignored-delete</div>
-                <div class="mutant"><span class="status survived">SURVIVED</span><span>allow → deny</span><small>tests still passed</small></div>
-                <div class="coverage-gap">! no denied decision was observed</div>
+                <div class="mutant"><span class="status survived">GAP FOUND</span><span>allow → deny</span><small>tests still passed</small></div>
+                <div class="coverage-gap">! decision changed, behavior did not</div>
               </div>
               <div class="report-summary">
                 <span><b>7</b> faults</span>
@@ -79,6 +79,20 @@
         <p class="section-kicker">The uncomfortable question</p>
         <h2 id="thesis-title">Your policy may be correct.<br>Your application might still <em>ignore it.</em></h2>
         <p>Policy evaluation tests prove the engine returns the right answer. AuthFault tests whether your application actually enforces that answer.</p>
+      </section>
+
+      <section class="bug-demo" aria-labelledby="bug-title">
+        <div class="bug-copy">
+          <p class="section-kicker">The bug it finds</p>
+          <h2 id="bug-title">A correct decision.<br><em>An ignored result.</em></h2>
+          <p>The authorizer returns <code>deny</code>, but one missing check lets the operation continue. AuthFault changes the decision during testing and notices that nothing changes.</p>
+        </div>
+        <div class="bug-code" aria-label="Example of an ignored authorization result">
+          <div><span class="line-number">1</span><code><span class="kw">const</span> allowed = <span class="kw">await</span> authorize(request);</code></div>
+          <div class="missing-line"><span class="line-number">2</span><code><span class="comment">// missing: if (!allowed) return forbidden()</span></code></div>
+          <div><span class="line-number">3</span><code><span class="kw">await</span> deleteProject();</code></div>
+          <p><span>GAP FOUND</span> Tests passed after the decision changed</p>
+        </div>
       </section>
 
       <section class="steps" id="how-it-works" aria-labelledby="steps-title">
@@ -112,7 +126,12 @@
         <div class="quickstart-copy">
           <p class="section-kicker">Quick start</p>
           <h2 id="quickstart-title">One wrapper.<br>Your same test suite.</h2>
-          <p>Keep your authorizer and your test runner. AuthFault sits at the decision boundary and changes nothing in production.</p>
+          <p>Keep your authorizer and your test runner. Setup is one wrapper and three short commands.</p>
+          <div class="install-steps">
+            <div><b>1</b><code>npm i -D authfault</code></div>
+            <div><b>2</b><code>npx authfault init</code></div>
+            <div><b>3</b><code>npx authfault</code></div>
+          </div>
           <div class="integrations" id="integrations">
             <span>Cedar</span><span>Amazon AVP</span><span>node:test</span><span>Vitest</span>
           </div>
@@ -128,7 +147,7 @@
     actor.role === <span class="str">"admin"</span> ||
     actor.tenantId === project.tenantId
 });</code></pre>
-          <div class="run-command"><span>$</span><code> npx authfault -- node --test</code></div>
+          <div class="run-command"><span>$</span><code> npx authfault</code></div>
         </div>
       </section>
 

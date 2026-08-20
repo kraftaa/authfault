@@ -8,6 +8,34 @@ question is deliberately narrow:
 It does **not** prove that an application is secure, discover missing checks, or
 replace API security testing.
 
+In plain language: **AuthFault checks whether your application actually obeys
+its authorization decisions.** It deliberately changes an observed `allow` to
+`deny` (and `deny` to `allow`) while testing. If the tests still pass, that
+decision is not protected by the current test suite.
+
+## Quick start
+
+Install AuthFault in a Node.js project:
+
+```sh
+npm install --save-dev authfault
+```
+
+Ask for a setup guide tailored to the detected test runner:
+
+```sh
+npx authfault init
+```
+
+After wrapping the authorizer as shown below, run:
+
+```sh
+npx authfault
+```
+
+With no arguments, AuthFault runs the project's existing `npm test` command.
+Use `npx authfault -- <command>` only when a different test command is needed.
+
 ## Try the spike
 
 No dependencies are required beyond Node.js 20 or newer.
@@ -91,7 +119,13 @@ const decisionCodec = {
 is not an authorization decision and must pass through unchanged. `context`
 contains the stable point `id` and the original authorizer `args`.
 
-Run the application's test command through the runner:
+Run the application's existing `npm test` command through the runner:
+
+```sh
+npx authfault
+```
+
+Or provide a different test command explicitly:
 
 ```sh
 authfault -- node --test test/*.test.js
@@ -249,11 +283,14 @@ package does not require TypeScript at runtime.
 
 ## What the report means
 
-- **KILLED**: changing the decision caused at least one test to fail.
-- **SURVIVED**: the tests still passed after the decision was changed.
-- **INCONCLUSIVE**: the isolated control failed, timed out, or could not run.
-- **FLAKY**: confirmation runs disagreed about whether the mutation was caught.
-- **COVERAGE GAP**: the baseline tests did not observe an allow or deny outcome
+- **PROTECTED (KILLED)**: changing the decision caused at least one test to fail.
+- **ENFORCEMENT GAP (SURVIVED)**: the tests still passed after the decision was
+  changed. Investigate; this is not automatically a vulnerability.
+- **COULD NOT VERIFY (INCONCLUSIVE)**: the isolated control failed, timed out,
+  or could not run.
+- **UNSTABLE RESULT (FLAKY)**: confirmation runs disagreed about whether the
+  mutation was caught.
+- **MISSING COVERAGE**: the baseline tests did not observe an allow or deny outcome
   at that enforcement point.
 
 A survivor is evidence that the test suite is insensitive to the injected

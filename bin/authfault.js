@@ -4,6 +4,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync
 } from "node:fs";
@@ -36,15 +37,20 @@ if (args.includes("--help") || args.includes("-h")) {
   process.exit(0);
 }
 
+if (args[0] === "init") {
+  printSetupGuide();
+  process.exit(0);
+}
+
 const separator = args.indexOf("--");
-if (separator === -1 || separator === args.length - 1) {
+if (separator === args.length - 1) {
   printHelp();
   process.exit(2);
 }
 
 let options;
 try {
-  options = parseOptions(args.slice(0, separator));
+  options = parseOptions(separator === -1 ? args : args.slice(0, separator));
 } catch (error) {
   console.error(`authfault: ${error.message}`);
   process.exit(2);
@@ -78,7 +84,7 @@ if (process.env.NODE_ENV === "production" && !options.allowProduction) {
   process.exit(2);
 }
 
-const command = args.slice(separator + 1);
+const command = separator === -1 ? defaultTestCommand() : args.slice(separator + 1);
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "authfault-"));
 let traceSequence = 0;
 
@@ -452,9 +458,57 @@ function inconclusiveResult(mutation, reason, result) {
   };
 }
 
+function defaultTestCommand() {
+  return [process.platform === "win32" ? "npm.cmd" : "npm", "test"];
+}
+
+function printSetupGuide() {
+  let packageJson = {};
+  try {
+    packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+  } catch {
+    // The guide remains useful before a package.json exists.
+  }
+
+  const dependencies = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies
+  };
+  const runner = dependencies.vitest
+    ? "Vitest"
+    : packageJson.scripts?.test?.includes("node --test")
+      ? "node:test"
+      : "your existing test command";
+
+  console.log(`AuthFault setup
+
+Detected: ${runner}
+
+1. Wrap the function that returns an authorization decision:
+
+   import { instrumentAuthorizer } from "authfault";
+
+   export const authorize = instrumentAuthorizer({
+     id: "project.delete",
+     authorize: realAuthorize
+   });
+
+2. Run your existing tests with authorization faults:
+
+   npx authfault
+
+AuthFault uses npm test by default. For another command, use:
+
+   npx authfault -- <test command>`);
+}
+
 function printHelp() {
   console.log(`Usage:
+  authfault
+  authfault init
   authfault [options] -- <test command> [arguments]
+
+With no command, AuthFault runs npm test.
 
 Options:
   --fail-on-survivor    Exit 1 when one or more unreviewed faults survive
@@ -473,5 +527,7 @@ Options:
   --help                Show this help
 
 Example:
+  authfault
+  authfault init
   authfault --reset-command '["npm","run","test:reset"]' -- node --test`);
 }

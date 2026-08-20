@@ -4,20 +4,25 @@ export function printReport(points, results, confirmKills, baselineSummary) {
     console.log(point.id);
     console.log(`  observed allow: ${point.allowCount}`);
     console.log(`  observed deny:  ${point.denyCount}`);
-    if (point.allowCount === 0) console.log("  COVERAGE GAP: no allowed decision was observed");
-    if (point.denyCount === 0) console.log("  COVERAGE GAP: no denied decision was observed");
+    if (point.allowCount === 0) console.log("  MISSING COVERAGE: no allowed decision was observed");
+    if (point.denyCount === 0) console.log("  MISSING COVERAGE: no denied decision was observed");
 
     for (const result of results.filter((item) => item.id === point.id)) {
       const hasCompensation = result.possibleCompensatingControls?.length > 0;
       let marker = hasCompensation
-        ? "SURVIVED WITH POSSIBLE COMPENSATING CONTROL"
-        : result.outcome.toUpperCase();
+        ? "REVIEW NEEDED (SURVIVED WITH POSSIBLE COMPENSATING CONTROL)"
+        : {
+            killed: "PROTECTED (KILLED)",
+            survived: "ENFORCEMENT GAP (SURVIVED)",
+            inconclusive: "COULD NOT VERIFY (INCONCLUSIVE)",
+            flaky: "UNSTABLE RESULT (FLAKY)"
+          }[result.outcome] ?? result.outcome.toUpperCase();
       if (result.outcome === "survived" && result.reviewed) {
-        marker += " (REVIEWED)";
+        marker += " — REVIEWED";
       } else if (result.reviewStatus === "invalid") {
         marker += result.reviewProblems.some((problem) => problem.includes("expired"))
-          ? " (REVIEW EXPIRED)"
-          : " (REVIEW INCOMPLETE)";
+          ? " — REVIEW EXPIRED"
+          : " — REVIEW INCOMPLETE";
       }
       console.log(`  ${marker}: ${result.fault}`);
       console.log(
@@ -59,7 +64,7 @@ export function printReport(points, results, confirmKills, baselineSummary) {
       `Survivors: ${baselineSummary.new} new, ${baselineSummary.invalid.length} invalid review, ${baselineSummary.reviewed} reviewed`
     );
     console.log(
-      "\nA survivor means the test suite did not detect the injected fault. Another denial in the same operation is evidence of a possible compensating control, not proof of safety."
+      "\nAn enforcement gap means the test suite did not detect the injected fault. It is a reason to investigate, not proof of a vulnerability. Another denial in the same operation is evidence of a possible compensating control, not proof of safety."
     );
   }
   if (baselineSummary.stale.length > 0) {

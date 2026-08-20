@@ -8,7 +8,7 @@ import {
   writeFileSync
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 
 test("reports killed faults, a survivor, and decision coverage gaps", () => {
@@ -32,17 +32,17 @@ test("reports killed faults, a survivor, and decision coverage gaps", () => {
 
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /project\.secure-delete/);
-    assert.match(result.stdout, /KILLED: force allowed decisions to deny/);
-    assert.match(result.stdout, /KILLED: force denied decisions to allow/);
+    assert.match(result.stdout, /PROTECTED \(KILLED\): force allowed decisions to deny/);
+    assert.match(result.stdout, /PROTECTED \(KILLED\): force denied decisions to allow/);
     assert.match(result.stdout, /confirmed by 2 failing mutation run\(s\)/);
     assert.match(result.stdout, /project\.ignored-delete/);
-    assert.match(result.stdout, /SURVIVED: force allowed decisions to deny/);
+    assert.match(result.stdout, /ENFORCEMENT GAP \(SURVIVED\): force allowed decisions to deny/);
     assert.match(
       result.stdout,
-      /SURVIVED WITH POSSIBLE COMPENSATING CONTROL: force denied decisions to allow/
+      /REVIEW NEEDED \(SURVIVED WITH POSSIBLE COMPENSATING CONTROL\): force denied decisions to allow/
     );
     assert.match(result.stdout, /another denial observed at: project\.layered-service/);
-    assert.match(result.stdout, /COVERAGE GAP: no denied decision was observed/);
+    assert.match(result.stdout, /MISSING COVERAGE: no denied decision was observed/);
     assert.match(result.stdout, /reran 1 attributed test\(s\)/);
 
     const report = JSON.parse(readFileSync(reportFile, "utf8"));
@@ -69,7 +69,7 @@ test("marks a failing isolated control as inconclusive", () => {
   const result = runFixture("test/fixtures/inconclusive.test.js");
 
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /INCONCLUSIVE: force allowed decisions to deny/);
+  assert.match(result.stdout, /COULD NOT VERIFY \(INCONCLUSIVE\): force allowed decisions to deny/);
   assert.match(result.stdout, /reason: the isolated control run failed/);
 });
 
@@ -83,11 +83,48 @@ test("marks inconsistent confirmation runs as flaky", () => {
     });
 
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /FLAKY: force allowed decisions to deny/);
+  assert.match(result.stdout, /UNSTABLE RESULT \(FLAKY\): force allowed decisions to deny/);
     assert.match(result.stdout, /0 killed, 0 survived, 0 inconclusive, 1 flaky/);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("runs npm test by default", () => {
+  const directory = mkdtempSync(join(tmpdir(), "authfault-default-test-"));
+  const fixture = resolve("test/fixtures/unattributed.test.js");
+  const cli = resolve("bin/authfault.js");
+
+  try {
+    writeFileSync(
+      join(directory, "package.json"),
+      `${JSON.stringify({
+        type: "module",
+        scripts: { test: `node --test ${JSON.stringify(fixture)}` }
+      }, null, 2)}\n`
+    );
+    const result = spawnSync(process.execPath, [cli, "--max-mutants", "1"], {
+      cwd: directory,
+      encoding: "utf8"
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /unattributed\.read/);
+    assert.match(result.stdout, /PROTECTED \(KILLED\)/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("prints a runner-aware setup guide", () => {
+  const result = spawnSync(process.execPath, ["./bin/authfault.js", "init"], {
+    encoding: "utf8"
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Detected: Vitest/);
+  assert.match(result.stdout, /instrumentAuthorizer/);
+  assert.match(result.stdout, /npx authfault/);
 });
 
 function runFixture(file, environment = {}) {
@@ -251,8 +288,8 @@ test("runs both Cedar structured-decision mutations end to end", () => {
   assert.match(result.stdout, /cedar\.document-read/);
   assert.match(result.stdout, /observed allow: 1/);
   assert.match(result.stdout, /observed deny:  1/);
-  assert.match(result.stdout, /KILLED: force allowed decisions to deny/);
-  assert.match(result.stdout, /KILLED: force denied decisions to allow/);
+  assert.match(result.stdout, /PROTECTED \(KILLED\): force allowed decisions to deny/);
+  assert.match(result.stdout, /PROTECTED \(KILLED\): force denied decisions to allow/);
 });
 
 test("isolates individual calls in occurrence granularity", () => {
@@ -329,7 +366,7 @@ test("baselines reviewed survivors and still fails for new or stale entries", ()
       "test/fixtures/survivor.test.js"
     );
     assert.equal(incompleteReview.status, 1, incompleteReview.stderr);
-    assert.match(incompleteReview.stdout, /SURVIVED \(REVIEW INCOMPLETE\)/);
+    assert.match(incompleteReview.stdout, /SURVIVED\) — REVIEW INCOMPLETE/);
     assert.match(incompleteReview.stdout, /missing review reason/);
     assert.match(
       incompleteReview.stdout,
@@ -361,7 +398,7 @@ test("baselines reviewed survivors and still fails for new or stale entries", ()
       "test/fixtures/survivor.test.js"
     );
     assert.equal(reviewed.status, 0, reviewed.stderr);
-    assert.match(reviewed.stdout, /SURVIVED \(REVIEWED\)/);
+    assert.match(reviewed.stdout, /SURVIVED\) — REVIEWED/);
     assert.match(
       reviewed.stdout,
       /Survivors: 0 new, 0 invalid review, 1 reviewed/
@@ -393,7 +430,7 @@ test("baselines reviewed survivors and still fails for new or stale entries", ()
       "test/fixtures/survivor.test.js"
     );
     assert.equal(expired.status, 1, expired.stderr);
-    assert.match(expired.stdout, /SURVIVED \(REVIEW EXPIRED\)/);
+    assert.match(expired.stdout, /SURVIVED\) — REVIEW EXPIRED/);
     assert.match(expired.stdout, /review expired on 2000-01-01/);
 
     writeFileSync(
