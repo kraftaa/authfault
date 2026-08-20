@@ -126,11 +126,12 @@
         <div class="quickstart-copy">
           <p class="section-kicker">Quick start</p>
           <h2 id="quickstart-title">One wrapper.<br>Your same test suite.</h2>
-          <p>Keep your authorizer and your test runner. Setup is one wrapper and three short commands.</p>
+          <p>Keep your authorizer and your test runner. Setup is one wrapper, a quick check, and one command.</p>
           <div class="install-steps">
             <div><b>1</b><code>npm i -D authfault</code></div>
             <div><b>2</b><code>npx authfault init</code></div>
-            <div><b>3</b><code>npx authfault</code></div>
+            <div><b>3</b><code>npx authfault doctor</code></div>
+            <div><b>4</b><code>npx authfault</code></div>
           </div>
           <div class="integrations" id="integrations">
             <span>Cedar</span><span>Amazon AVP</span><span>node:test</span><span>Vitest</span>
@@ -159,6 +160,24 @@
         <div class="boundary-list">
           <p><span>✓</span><b>It tells you</b> whether tests detect a wrong observed authorization decision.</p>
           <p><span>×</span><b>It does not</b> prove your system is secure or discover checks that never run.</p>
+        </div>
+      </section>
+
+      <section class="ci-section" aria-labelledby="ci-title">
+        <div>
+          <p class="section-kicker">Built for pull requests</p>
+          <h2 id="ci-title">A result your team<br>can act on.</h2>
+          <p>AuthFault can fail CI on new enforcement gaps and add a readable summary directly to the GitHub Actions run.</p>
+        </div>
+        <div class="ci-card">
+          <div class="ci-command"><span>$</span> npx authfault --fail-on-gap --reporter github</div>
+          <h3>AuthFault authorization test</h3>
+          <p>Tested <b>7 authorization faults</b> across <b>5 enforcement points.</b></p>
+          <ul>
+            <li><span class="ci-good">✓</span><b>5 protected</b><small>tests detected the change</small></li>
+            <li><span class="ci-bad">×</span><b>1 enforcement gap</b><small>tests still passed</small></li>
+            <li><span class="ci-warn">△</span><b>1 needs review</b><small>possible compensating control</small></li>
+          </ul>
         </div>
       </section>
 

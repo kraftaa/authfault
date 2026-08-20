@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import {
+  appendFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -27,7 +28,11 @@ import {
   processAttempt,
   run
 } from "../src/runner/process.js";
-import { printReport } from "../src/runner/report.js";
+import {
+  formatGitHubAnnotations,
+  formatGitHubSummary,
+  printReport
+} from "../src/runner/report.js";
 import { readEvents } from "../src/runner/trace.js";
 
 const args = process.argv.slice(2);
@@ -40,6 +45,10 @@ if (args.includes("--help") || args.includes("-h")) {
 if (args[0] === "init") {
   printSetupGuide();
   process.exit(0);
+}
+
+if (args[0] === "doctor") {
+  process.exit(runDoctor());
 }
 
 const separator = args.indexOf("--");
@@ -231,6 +240,10 @@ try {
       );
       printReport(points, results, options.confirmKills, baselineSummary);
 
+      if (options.reporter === "github") {
+        writeGitHubReport(points, results);
+      }
+
       if (options.writeBaseline) {
         const incomplete = results.filter(
           (result) => ["inconclusive", "flaky"].includes(result.outcome)
@@ -369,6 +382,7 @@ function parseOptions(optionArgs) {
     json: null,
     maxMutants: Number.POSITIVE_INFINITY,
     resetCommand: null,
+    reporter: "console",
     timeout: 30_000,
     verbose: false,
     writeBaseline: null
@@ -380,7 +394,7 @@ function parseOptions(optionArgs) {
       parsed.allowProduction = true;
     } else if (option === "--baseline") {
       parsed.baseline = requiredValue(optionArgs[++index], "--baseline");
-    } else if (option === "--fail-on-survivor") {
+    } else if (["--fail-on-survivor", "--fail-on-gap"].includes(option)) {
       parsed.failOnSurvivor = true;
     } else if (option === "--granularity") {
       parsed.granularity = requiredValue(optionArgs[++index], "--granularity");
@@ -412,6 +426,11 @@ function parseOptions(optionArgs) {
         parsed.resetCommand.some((item) => typeof item !== "string" || item === "")
       ) {
         throw new Error("--reset-command requires a non-empty JSON array of strings");
+      }
+    } else if (option === "--reporter") {
+      parsed.reporter = requiredValue(optionArgs[++index], "--reporter");
+      if (!["console", "github"].includes(parsed.reporter)) {
+        throw new Error("--reporter must be console or github");
       }
     } else if (option === "--write-baseline") {
       parsed.writeBaseline = requiredValue(
@@ -462,6 +481,91 @@ function defaultTestCommand() {
   return [process.platform === "win32" ? "npm.cmd" : "npm", "test"];
 }
 
+function runDoctor() {
+  console.log("AuthFault doctor\n");
+  let packageJson;
+  try {
+    packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+    console.log("✓ package.json found");
+  } catch {
+    console.log("✗ package.json was not found or is invalid");
+    return 1;
+  }
+
+  if (!packageJson.scripts?.test) {
+    console.log("✗ package.json has no test script");
+    return 1;
+  }
+  console.log(`✓ test command found: ${packageJson.scripts.test}`);
+
+  const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
+  const runner = dependencies.vitest
+    ? "Vitest"
+    : packageJson.scripts.test.includes("node --test")
+      ? "node:test"
+      : "custom test runner";
+  console.log(`✓ test runner detected: ${runner}`);
+
+  if (process.env.NODE_ENV === "production") {
+    console.log("✗ refusing to run project tests with NODE_ENV=production");
+    return 1;
+  }
+
+  const directory = mkdtempSync(join(tmpdir(), "authfault-doctor-"));
+  try {
+    const result = run(
+      defaultTestCommand(),
+      {
+        ...baseEnvironment(),
+        AUTHFAULT_TRACE_DIR: directory,
+        AUTHFAULT_PHASE: "doctor"
+      },
+      30_000
+    );
+
+    if (executionProblem(result) || result.status !== 0) {
+      console.log("✗ the existing test command did not pass");
+      printProcessOutput(result);
+      return 1;
+    }
+    console.log("✓ existing tests pass");
+
+    const events = readEvents(directory);
+    if (events.length === 0) {
+      console.log("✗ no instrumented authorization decisions were observed");
+      console.log("  Run npx authfault init for the wrapper example.");
+      return 1;
+    }
+
+    const points = [...new Set(events.map((event) => event.id))];
+    const attributed = events.filter((event) => event.testId).length;
+    console.log(`✓ observed ${events.length} authorization decision(s) at ${points.length} point(s)`);
+    if (attributed === events.length) {
+      console.log("✓ every decision is attributed to a test");
+    } else {
+      console.log(`△ ${events.length - attributed} decision(s) are not attributed to a test; mutation runs may rerun the full suite`);
+    }
+    console.log("\nReady: run npx authfault");
+    return 0;
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+function writeGitHubReport(points, results) {
+  const summary = formatGitHubSummary(points, results);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary, "utf8");
+    console.log(`\nGitHub Actions summary written`);
+  } else {
+    console.log("\nauthfault: GITHUB_STEP_SUMMARY is not set; printing the GitHub summary locally.\n");
+    console.log(summary);
+  }
+  for (const annotation of formatGitHubAnnotations(results)) {
+    console.log(annotation);
+  }
+}
+
 function printSetupGuide() {
   let packageJson = {};
   try {
@@ -506,12 +610,14 @@ function printHelp() {
   console.log(`Usage:
   authfault
   authfault init
+  authfault doctor
   authfault [options] -- <test command> [arguments]
 
 With no command, AuthFault runs npm test.
 
 Options:
   --fail-on-survivor    Exit 1 when one or more unreviewed faults survive
+  --fail-on-gap         Alias for --fail-on-survivor
   --baseline <path>     Accept reviewed survivors from a baseline JSON file
   --write-baseline <path>
                         Write current survivors to a baseline JSON file
@@ -521,6 +627,7 @@ Options:
   --reset-command <json-array>
                         Run a command before every test execution
   --allow-production    Override the NODE_ENV=production safety refusal
+  --reporter <name>     Reporter: console or github (default: console)
   --json <path>         Write the machine-readable report to a JSON file
   --max-mutants <n>     Limit the number of mutation runs
   --verbose             Show output from failing runs
@@ -529,5 +636,6 @@ Options:
 Example:
   authfault
   authfault init
+  authfault doctor
   authfault --reset-command '["npm","run","test:reset"]' -- node --test`);
 }

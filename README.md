@@ -31,7 +31,13 @@ Ask for a setup guide tailored to the detected test runner:
 npx authfault init
 ```
 
-After wrapping the authorizer as shown below, run:
+After wrapping the authorizer as shown below, verify that the tests observe it:
+
+```sh
+npx authfault doctor
+```
+
+Then inject the authorization faults:
 
 ```sh
 npx authfault
@@ -39,6 +45,9 @@ npx authfault
 
 With no arguments, AuthFault runs the project's existing `npm test` command.
 Use `npx authfault -- <command>` only when a different test command is needed.
+
+`doctor` runs the existing tests without injecting faults and checks that
+instrumented decisions were observed and attributed to individual tests.
 
 ## Try the spike
 
@@ -230,6 +239,17 @@ applicable. A failed or timed-out reset prevents the corresponding test
 execution from being credited.
 
 ### Review survivors in CI
+
+Use the plain-language failure option and GitHub reporter in GitHub Actions:
+
+```yaml
+- name: Test authorization enforcement
+  run: npx authfault --fail-on-gap --reporter github
+```
+
+The reporter adds a job summary with protected faults, enforcement gaps, and
+results needing review. `--fail-on-gap` is an alias for the original
+`--fail-on-survivor` option; both remain supported.
 
 Generate a review template for the current survivors:
 

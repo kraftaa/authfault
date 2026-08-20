@@ -127,6 +127,22 @@ pre { overflow-x: auto; margin: 0; padding: 29px 28px 26px; font: 11px/1.8 var(-
 .boundary-list p:last-child { border-bottom: 1px solid #3c413d; }
 .boundary-list span { grid-row: span 2; color: var(--acid); font-family: var(--mono); }
 .boundary-list p:last-child span { color: var(--red); }
+
+.ci-section { padding: 110px max(30px, calc((100vw - 1120px) / 2)); display: grid; grid-template-columns: .9fr 1.1fr; gap: 90px; align-items: center; }
+.ci-section h2 { font-size: clamp(39px, 4vw, 59px); }
+.ci-section > div:first-child > p:last-child { max-width: 480px; color: var(--muted); line-height: 1.7; }
+.ci-card { border: 1px solid #c6c3ba; background: var(--paper-light); box-shadow: 8px 8px 0 #dbd7cc; padding: 28px; }
+.ci-command { margin: -28px -28px 25px; padding: 14px 18px; background: var(--ink); color: #c8cbc4; font: 9px var(--mono); }
+.ci-command span { color: var(--acid); }
+.ci-card h3 { margin: 0 0 9px; font-size: 18px; letter-spacing: -.03em; }
+.ci-card > p { color: var(--muted); font-size: 12px; }
+.ci-card ul { margin: 23px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; }
+.ci-card li { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 11px; }
+.ci-card li > span { font-family: var(--mono); }
+.ci-card small { color: #858a84; font: 8px var(--mono); }
+.ci-good { color: #7d9e08; }
+.ci-bad { color: var(--red); }
+.ci-warn { color: #ad7d19; }
 .boundary-list b { color: #f4f1e8; font-size: 13px; }
 
 .final-cta { position: relative; overflow: hidden; padding: 125px 30px; text-align: center; background: var(--acid); }
@@ -147,7 +163,7 @@ footer > div { justify-self: end; display: flex; gap: 25px; font-family: var(--m
   .hero { grid-template-columns: 1fr; padding-top: 70px; }
   .hero-copy { max-width: 680px; }
   .terminal-wrap { max-width: 650px; }
-  .section-heading, .bug-demo, .quickstart, .boundary { grid-template-columns: 1fr; gap: 45px; }
+  .section-heading, .bug-demo, .quickstart, .boundary, .ci-section { grid-template-columns: 1fr; gap: 45px; }
   .step-grid { grid-template-columns: 1fr; }
   .step-grid li { min-height: auto; border-left: 0; border-top: 1px solid var(--line); padding-bottom: 35px; }
   .step-grid li:first-child { border-top: 0; }
@@ -165,9 +181,11 @@ footer > div { justify-self: end; display: flex; gap: 25px; font-family: var(--m
   .terminal-shadow { right: 0; }
   .mutant { grid-template-columns: 66px 1fr; }
   .mutant small { display: none; }
-  .thesis, .bug-demo, .steps, .final-cta { padding: 85px 20px; }
+  .thesis, .bug-demo, .steps, .ci-section, .final-cta { padding: 85px 20px; }
   .quickstart, .boundary { padding: 80px 20px; }
   pre { font-size: 9px; padding: 24px 18px; }
+  .ci-card li { grid-template-columns: 22px 1fr; }
+  .ci-card small { grid-column: 2; margin-top: 3px; }
   footer { grid-template-columns: 1fr 1fr; padding: 24px 20px; }
   footer p { display: none; }
 }

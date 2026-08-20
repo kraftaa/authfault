@@ -79,3 +79,71 @@ export function printReport(points, results, confirmKills, baselineSummary) {
     }
   }
 }
+
+export function formatGitHubSummary(points, results) {
+  const protectedCount = results.filter((result) => result.outcome === "killed").length;
+  const gapResults = results.filter(
+    (result) =>
+      result.outcome === "survived" &&
+      !result.reviewed &&
+      !result.possibleCompensatingControls?.length
+  );
+  const reviewResults = results.filter(
+    (result) =>
+      ["inconclusive", "flaky"].includes(result.outcome) ||
+      (result.outcome === "survived" &&
+        !result.reviewed &&
+        result.possibleCompensatingControls?.length)
+  );
+  const reviewedCount = results.filter(
+    (result) => result.outcome === "survived" && result.reviewed
+  ).length;
+
+  const lines = [
+    "## AuthFault authorization test",
+    "",
+    `Tested **${results.length} authorization faults** across **${points.length} enforcement points**.`,
+    "",
+    `- ✅ **${protectedCount} protected** — tests detected the changed decision`,
+    `- ❌ **${gapResults.length} enforcement gap${gapResults.length === 1 ? "" : "s"}** — tests still passed`,
+    `- ⚠️ **${reviewResults.length} need${reviewResults.length === 1 ? "s" : ""} review** — result was compensated, flaky, or inconclusive`,
+    `- 📝 **${reviewedCount} reviewed** — accepted through the survivor baseline`
+  ];
+
+  if (gapResults.length > 0 || reviewResults.length > 0) {
+    lines.push("", "| Point | Result | Injected fault |", "| --- | --- | --- |");
+    for (const result of [...gapResults, ...reviewResults]) {
+      const label = gapResults.includes(result) ? "Enforcement gap" : "Needs review";
+      lines.push(`| \`${escapeMarkdown(result.id)}\` | ${label} | ${escapeMarkdown(result.fault)} |`);
+    }
+  }
+
+  lines.push(
+    "",
+    "> An enforcement gap is a reason to investigate, not proof of a vulnerability.",
+    ""
+  );
+  return lines.join("\n");
+}
+
+export function formatGitHubAnnotations(results) {
+  return results
+    .filter((result) => result.outcome === "survived" && !result.reviewed)
+    .map((result) => {
+      const title = result.possibleCompensatingControls?.length
+        ? "AuthFault result needs review"
+        : "AuthFault enforcement gap";
+      return `::warning title=${escapeWorkflowCommand(title)}::${escapeWorkflowCommand(`${result.id}: ${result.fault}`)}`;
+    });
+}
+
+function escapeMarkdown(value) {
+  return String(value).replaceAll("|", "\\|").replaceAll("`", "\\`");
+}
+
+function escapeWorkflowCommand(value) {
+  return String(value)
+    .replaceAll("%", "%25")
+    .replaceAll("\r", "%0D")
+    .replaceAll("\n", "%0A");
+}

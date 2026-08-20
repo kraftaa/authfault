@@ -127,6 +127,39 @@ test("prints a runner-aware setup guide", () => {
   assert.match(result.stdout, /npx authfault/);
 });
 
+test("supports the plain-language fail-on-gap alias", () => {
+  const result = runWithOptions(
+    ["--fail-on-gap"],
+    "test/fixtures/survivor.test.js"
+  );
+
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stdout, /ENFORCEMENT GAP \(SURVIVED\)/);
+});
+
+test("writes a GitHub Actions summary and annotations", () => {
+  const directory = mkdtempSync(join(tmpdir(), "authfault-github-report-"));
+  const summaryFile = join(directory, "summary.md");
+
+  try {
+    const result = runWithOptions(
+      ["--reporter", "github"],
+      "test/fixtures/survivor.test.js",
+      { GITHUB_STEP_SUMMARY: summaryFile }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /GitHub Actions summary written/);
+    assert.match(result.stdout, /::warning title=AuthFault enforcement gap::/);
+    const summary = readFileSync(summaryFile, "utf8");
+    assert.match(summary, /## AuthFault authorization test/);
+    assert.match(summary, /1 enforcement gap/);
+    assert.match(summary, /`reviewed\.ignored-check`/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 function runFixture(file, environment = {}) {
   return spawnSync(
     process.execPath,
