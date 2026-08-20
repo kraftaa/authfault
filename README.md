@@ -15,6 +15,10 @@ decision is not protected by the current test suite.
 
 ## Quick start
 
+> **Pre-release:** `authfault` is not published to npm yet. The commands below
+> describe the intended release workflow; for local evaluation, install this
+> checkout by path with `npm install --save-dev /path/to/authfault`.
+
 Install AuthFault in a Node.js project:
 
 ```sh
