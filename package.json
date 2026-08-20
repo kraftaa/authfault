@@ -1,0 +1,65 @@
+{
+  "name": "authfault",
+  "version": "0.1.0",
+  "description": "Authorization fault injection for testing whether your test suite detects broken enforcement.",
+  "keywords": [
+    "authorization",
+    "mutation-testing",
+    "fault-injection",
+    "security-testing",
+    "cedar"
+  ],
+  "type": "module",
+  "types": "./src/index.d.ts",
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "bin": {
+    "authfault": "./bin/authfault.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./node-test": {
+      "types": "./src/node-test.d.ts",
+      "import": "./src/node-test.js"
+    },
+    "./vitest": {
+      "types": "./src/vitest.d.ts",
+      "import": "./src/vitest.js"
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js && npm run test:types",
+    "test:types": "tsc -p tsconfig.types.json",
+    "demo": "node ./bin/authfault.js -- node --test examples/multitenant/app.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kraftaa/authfault.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kraftaa/authfault/issues"
+  },
+  "homepage": "https://github.com/kraftaa/authfault#readme",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "peerDependencies": {
+    "vitest": ">=4.1.0 <5"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  }
+}
