@@ -86,6 +86,10 @@
           <p class="section-kicker">The bug it finds</p>
           <h2 id="bug-title">A correct decision.<br><em>An ignored result.</em></h2>
           <p>The authorizer returns <code>deny</code>, but one missing check lets the operation continue. AuthFault changes the decision during testing and notices that nothing changes.</p>
+          <div class="direction-guide">
+            <p><b>allow → deny</b><span>A forced denial went undetected. The result may not control the operation.</span></p>
+            <p><b>deny → allow</b><span>A forced allow went undetected. Check for another control or a missing negative assertion.</span></p>
+          </div>
         </div>
         <div class="bug-code" aria-label="Example of an ignored authorization result">
           <div><span class="line-number">1</span><code><span class="kw">const</span> allowed = <span class="kw">await</span> authorize(request);</code></div>
@@ -134,7 +138,7 @@
             <div><b>4</b><code>npx authfault</code></div>
           </div>
           <div class="integrations" id="integrations">
-            <span>Cedar</span><span>Amazon AVP</span><span>node:test</span><span>Vitest</span>
+            <span>Cedar</span><span>Amazon AVP</span><span>Express</span><span>node:test</span><span>Vitest</span>
           </div>
         </div>
         <div class="code-card">

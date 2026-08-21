@@ -37,10 +37,12 @@ test("reports killed faults, a survivor, and decision coverage gaps", () => {
     assert.match(result.stdout, /confirmed by 2 failing mutation run\(s\)/);
     assert.match(result.stdout, /project\.ignored-delete/);
     assert.match(result.stdout, /ENFORCEMENT GAP \(SURVIVED\): force allowed decisions to deny/);
+    assert.match(result.stdout, /tests did not detect a forced deny/);
     assert.match(
       result.stdout,
       /REVIEW NEEDED \(SURVIVED WITH POSSIBLE COMPENSATING CONTROL\): force denied decisions to allow/
     );
+    assert.match(result.stdout, /tests did not detect a forced allow/);
     assert.match(result.stdout, /another denial observed at: project\.layered-service/);
     assert.match(result.stdout, /MISSING COVERAGE: no denied decision was observed/);
     assert.match(result.stdout, /reran 1 attributed test\(s\)/);
@@ -103,7 +105,7 @@ test("runs npm test by default", () => {
         scripts: { test: `node --test ${JSON.stringify(fixture)}` }
       }, null, 2)}\n`
     );
-    const result = spawnSync(process.execPath, [cli, "--max-mutants", "1"], {
+    const result = spawnSync(process.execPath, [cli], {
       cwd: directory,
       encoding: "utf8"
     });
@@ -111,6 +113,27 @@ test("runs npm test by default", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /unattributed\.read/);
     assert.match(result.stdout, /PROTECTED \(KILLED\)/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("refuses a recursive default npm test script", () => {
+  const directory = mkdtempSync(join(tmpdir(), "authfault-recursion-test-"));
+  const cli = resolve("bin/authfault.js");
+
+  try {
+    writeFileSync(
+      join(directory, "package.json"),
+      `${JSON.stringify({ scripts: { test: "npx authfault --fail-on-gap" } })}\n`
+    );
+    const result = spawnSync(process.execPath, [cli], {
+      cwd: directory,
+      encoding: "utf8"
+    });
+
+    assert.equal(result.status, 2);
+    assert.match(result.stderr, /launches authfault recursively/);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

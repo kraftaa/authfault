@@ -80,6 +80,10 @@ h1 em, h2 em { color: #789600; font-family: Georgia, serif; font-weight: 400; }
 .bug-copy h2 { font-size: clamp(39px, 4vw, 59px); }
 .bug-copy > p:last-child { color: var(--muted); line-height: 1.7; }
 .bug-copy code { padding: 1px 5px; background: #dedbd1; font-family: var(--mono); font-size: .85em; }
+.direction-guide { margin-top: 25px; border-top: 1px solid var(--line); }
+.direction-guide p { display: grid; grid-template-columns: 95px 1fr; gap: 12px; margin: 0; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.direction-guide b { font: 10px var(--mono); color: #6f890a; }
+.direction-guide span { color: #71766f; font-size: 10px; line-height: 1.5; }
 .bug-code { background: #111412; color: #daddd5; border: 1px solid #393d39; box-shadow: 9px 9px 0 #d2cfc5; font: 11px/1.8 var(--mono); }
 .bug-code > div { display: grid; grid-template-columns: 35px 1fr; padding: 6px 20px 6px 0; }
 .bug-code .line-number { color: #515751; text-align: center; user-select: none; }

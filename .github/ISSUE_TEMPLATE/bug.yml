@@ -1,0 +1,33 @@
+name: Bug report
+description: Report incorrect or unexpected AuthFault behavior
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, authorization request bodies, personal data, or unredacted production traces. Report vulnerabilities through the private security-advisory form instead.
+  - type: input
+    id: version
+    attributes:
+      label: AuthFault version or commit
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the command, sanitized instrumentation, and observed output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true

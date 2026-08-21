@@ -56,6 +56,7 @@ No dependencies are required beyond Node.js 20 or newer.
 ```sh
 npm test
 npm run demo
+npm run demo:express
 ```
 
 The demo contains:
@@ -65,6 +66,12 @@ The demo contains:
 - a correctly enforced operation with no negative decision coverage; and
 - a layered route/service check that demonstrates a possible compensating
   control.
+
+`npm run demo:express` exercises the same idea through real HTTP requests. Its
+delete route correctly enforces tenant ownership; its archive route contains a
+deliberate integration bug that calculates an authorization decision and then
+ignores it. The example keeps Express as a development-only dependency—AuthFault
+itself still has zero runtime dependencies.
 
 ## Instrument an authorizer
 
@@ -320,6 +327,16 @@ package does not require TypeScript at runtime.
 A survivor is evidence that the test suite is insensitive to the injected
 fault. It is not automatically a vulnerability: another control may be
 providing deliberate defense in depth.
+
+Mutation direction provides additional context:
+
+| Injected change | What a survivor means |
+| --- | --- |
+| `allow` → `deny` | The tests did not detect a forced denial. The authorization result may not control the operation's behavior. |
+| `deny` → `allow` | The tests did not detect a forced allow. Verify whether another control intentionally blocks access or a negative assertion is missing. |
+
+These are investigation prompts, not severity ratings. AuthFault has no
+ground-truth knowledge about the application's intended behavior.
 
 Before injecting a fault, the runner executes the selected tests without a
 mutation. Killed faults are repeated twice by default. Configure this with

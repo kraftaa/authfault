@@ -43,6 +43,9 @@ export function printReport(points, results, confirmKills, baselineSummary) {
       if (hasCompensation) {
         console.log(`    another denial observed at: ${result.possibleCompensatingControls.join(", ")}`);
       }
+      if (result.outcome === "survived") {
+        console.log(`    why it matters: ${survivorExplanation(result)}`);
+      }
       if (result.reviewProblems?.length > 0) {
         console.log(`    review: ${result.reviewProblems.join("; ")}`);
       }
@@ -113,7 +116,10 @@ export function formatGitHubSummary(points, results) {
   if (gapResults.length > 0 || reviewResults.length > 0) {
     lines.push("", "| Point | Result | Injected fault |", "| --- | --- | --- |");
     for (const result of [...gapResults, ...reviewResults]) {
-      const label = gapResults.includes(result) ? "Enforcement gap" : "Needs review";
+      const direction = result.decision === "allow" ? "forced allow" : "forced deny";
+      const label = gapResults.includes(result)
+        ? `Enforcement gap (${direction})`
+        : `Needs review (${direction})`;
       lines.push(`| \`${escapeMarkdown(result.id)}\` | ${label} | ${escapeMarkdown(result.fault)} |`);
     }
   }
@@ -124,6 +130,13 @@ export function formatGitHubSummary(points, results) {
     ""
   );
   return lines.join("\n");
+}
+
+export function survivorExplanation(result) {
+  if (result.decision === "allow") {
+    return "tests did not detect a forced allow; verify that another control intentionally blocks access or add a negative assertion";
+  }
+  return "tests did not detect a forced deny; this authorization result may not control the operation's behavior";
 }
 
 export function formatGitHubAnnotations(results) {

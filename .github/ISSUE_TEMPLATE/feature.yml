@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest a focused improvement to authorization enforcement testing
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Authorization-testing problem
+      description: What real workflow or enforcement-testing gap would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This remains a test-time feature and does not turn AuthFault into a production authorization system.
+          required: true

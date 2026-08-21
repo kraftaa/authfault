@@ -52,7 +52,7 @@ if (args[0] === "doctor") {
 }
 
 const separator = args.indexOf("--");
-if (separator === args.length - 1) {
+if (separator !== -1 && separator === args.length - 1) {
   printHelp();
   process.exit(2);
 }
@@ -93,7 +93,13 @@ if (process.env.NODE_ENV === "production" && !options.allowProduction) {
   process.exit(2);
 }
 
-const command = separator === -1 ? defaultTestCommand() : args.slice(separator + 1);
+let command;
+try {
+  command = separator === -1 ? defaultTestCommand() : args.slice(separator + 1);
+} catch (error) {
+  console.error(`authfault: ${error.message}`);
+  process.exit(2);
+}
 const temporaryDirectory = mkdtempSync(join(tmpdir(), "authfault-"));
 let traceSequence = 0;
 
@@ -478,6 +484,25 @@ function inconclusiveResult(mutation, reason, result) {
 }
 
 function defaultTestCommand() {
+  let packageJson;
+  try {
+    packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+  } catch {
+    throw new Error(
+      "cannot run npm test because package.json was not found or is invalid; pass a test command after --"
+    );
+  }
+  const testScript = packageJson.scripts?.test;
+  if (!testScript) {
+    throw new Error(
+      "cannot run npm test because package.json has no test script; pass a test command after --"
+    );
+  }
+  if (/(?:^|\s|[;&|])(?:npx\s+|npm\s+exec\s+)?authfault(?:\s|$|[;&|])/u.test(testScript)) {
+    throw new Error(
+      "refusing to run npm test because its test script launches authfault recursively; keep the normal test command in scripts.test or pass it after --"
+    );
+  }
   return [process.platform === "win32" ? "npm.cmd" : "npm", "test"];
 }
 
@@ -513,8 +538,15 @@ function runDoctor() {
 
   const directory = mkdtempSync(join(tmpdir(), "authfault-doctor-"));
   try {
+    let command;
+    try {
+      command = defaultTestCommand();
+    } catch (error) {
+      console.log(`✗ ${error.message}`);
+      return 1;
+    }
     const result = run(
-      defaultTestCommand(),
+      command,
       {
         ...baseEnvironment(),
         AUTHFAULT_TRACE_DIR: directory,
