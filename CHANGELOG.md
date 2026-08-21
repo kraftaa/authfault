@@ -19,6 +19,8 @@ versioning after its first public release.
 - Multi-tenant service and Express HTTP examples.
 - One-time OpenFGA client instrumentation that preserves existing `check`
   call sites.
+- Authorization-point inventory and richer coverage diagnostics in `doctor`.
+- A real-SDK OpenFGA example and five-minute integration guide.
 
 ### Security
 

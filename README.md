@@ -20,6 +20,9 @@ still pass, that decision is not protected by the current test suite.
 
 ## Quick start
 
+For a guided first integration, see **[Your first AuthFault result in five
+minutes](https://github.com/kraftaa/authfault/blob/main/docs/QUICKSTART.md)**.
+
 > **Pre-release:** `authfault` is not published to npm yet. The commands below
 > describe the intended release workflow; for local evaluation, install this
 > checkout by path with `npm install --save-dev /path/to/authfault`.
@@ -55,8 +58,16 @@ npx authfault
 With no arguments, AuthFault runs the project's existing `npm test` command.
 Use `npx authfault -- <command>` only when a different test command is needed.
 
-`doctor` runs the existing tests without injecting faults and checks that
-instrumented decisions were observed and attributed to individual tests.
+`doctor` runs the existing tests without injecting faults. It lists observed
+points, allow/deny coverage, attribution quality, and evidence that one point ID
+may span several logical operations. To print the complete inventory with test
+names, run:
+
+```sh
+npx authfault list-points
+```
+
+Both inspection commands accept a different test command after `--`.
 
 ## Try the spike
 
@@ -66,6 +77,7 @@ No dependencies are required beyond Node.js 20 or newer.
 npm test
 npm run demo
 npm run demo:express
+npm run demo:openfga
 ```
 
 The demo contains:
@@ -81,6 +93,10 @@ delete route correctly enforces tenant ownership; its archive route contains a
 deliberate integration bug that calculates an authorization decision and then
 ignores it. The example keeps Express as a development-only dependency—AuthFault
 itself still has zero runtime dependencies.
+
+`npm run demo:openfga` exercises the adapter through the official OpenFGA
+JavaScript SDK. It replaces only the network transport with a deterministic
+response, so no OpenFGA server is required.
 
 ## Instrument an authorizer
 

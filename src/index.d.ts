@@ -90,13 +90,13 @@ export interface OpenFgaCheckRequest {
 }
 
 export interface OpenFgaCheckResult {
-  allowed: boolean;
+  allowed?: boolean;
   [key: string]: unknown;
 }
 
 export function instrumentOpenFgaClient<
   Client extends {
-    check(...args: any[]): Awaitable<{ allowed: boolean }>;
+    check(...args: any[]): Awaitable<{ allowed?: boolean }>;
   }
 >(options: {
   client: Client;

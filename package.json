@@ -37,7 +37,8 @@
     "test": "node --test test/*.test.js && npm run test:types",
     "test:types": "tsc -p tsconfig.types.json",
     "demo": "node ./bin/authfault.js -- node --test examples/multitenant/app.test.js",
-    "demo:express": "node ./bin/authfault.js -- node --test examples/express/app.test.js"
+    "demo:express": "node ./bin/authfault.js -- node --test examples/express/app.test.js",
+    "demo:openfga": "node ./bin/authfault.js -- node --test examples/openfga/app.test.js"
   },
   "engines": {
     "node": ">=20"
@@ -52,6 +53,7 @@
   "homepage": "https://github.com/kraftaa/authfault#readme",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@openfga/sdk": "^0.9.7",
     "@types/node": "^26.2.0",
     "express": "^5.2.1",
     "typescript": "^7.0.2",

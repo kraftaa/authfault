@@ -1,0 +1,16 @@
+import { readFileSync } from "node:fs";
+
+const packageJson = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8")
+);
+const expectedTag = `v${packageJson.version}`;
+const actualTag = process.env.AUTHFAULT_RELEASE_TAG;
+
+if (actualTag !== expectedTag) {
+  console.error(
+    `Release tag ${JSON.stringify(actualTag)} does not match package version tag ${JSON.stringify(expectedTag)}.`
+  );
+  process.exit(1);
+}
+
+console.log(`Release tag ${actualTag} matches package version ${packageJson.version}.`);

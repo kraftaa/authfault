@@ -8,6 +8,7 @@ import {
 } from "authfault";
 import { authfaultTest as nodeTest } from "authfault/node-test";
 import { authfaultTest as vitestTest } from "authfault/vitest";
+import { OpenFgaClient } from "@openfga/sdk";
 
 const booleanAuthorizer = instrumentAuthorizer({
   id: "typed.boolean",
@@ -95,6 +96,13 @@ const openFgaResult: Promise<{ allowed: boolean; requestId: string }> =
     relation: "viewer",
     object: "document:roadmap"
   });
+const officialOpenFgaClient: OpenFgaClient = instrumentOpenFgaClient({
+  client: new OpenFgaClient({
+    apiUrl: "http://127.0.0.1:8080",
+    storeId: "01H0H015178Y2V4CX10C2KGHF4"
+  }),
+  id: request => `document.${request.relation}`
+});
 
 nodeTest("typed node test", async context => {
   context.diagnostic(environment.mutation);
@@ -108,6 +116,7 @@ void objectResult;
 void guardResult;
 void operationResult;
 void openFgaResult;
+void officialOpenFgaClient;
 
 // @ts-expect-error Structured decisions require a decision codec.
 instrumentAuthorizer({

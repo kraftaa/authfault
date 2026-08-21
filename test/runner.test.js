@@ -140,16 +140,27 @@ test("refuses a recursive default npm test script", () => {
 });
 
 test("prints a runner-aware setup guide", () => {
-  const result = spawnSync(process.execPath, ["./bin/authfault.js", "init"], {
-    encoding: "utf8"
-  });
+  const directory = mkdtempSync(join(tmpdir(), "authfault-node-init-"));
+  try {
+    writeFileSync(
+      join(directory, "package.json"),
+      `${JSON.stringify({ scripts: { test: "node --test" } })}\n`
+    );
+    const cli = resolve("bin/authfault.js");
+    const result = spawnSync(process.execPath, [cli, "init"], {
+      cwd: directory,
+      encoding: "utf8"
+    });
 
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Detected: Vitest/);
-  assert.match(result.stdout, /no files changed/);
-  assert.match(result.stdout, /instrumentAuthorizer/);
-  assert.match(result.stdout, /authfault doctor/);
-  assert.match(result.stdout, /npx authfault/);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Detected: node:test/);
+    assert.match(result.stdout, /no files changed/);
+    assert.match(result.stdout, /instrumentAuthorizer/);
+    assert.match(result.stdout, /authfault doctor/);
+    assert.match(result.stdout, /npx authfault/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("prints a one-time client wrapper when OpenFGA is detected", () => {
@@ -172,6 +183,70 @@ test("prints a one-time client wrapper when OpenFGA is detected", () => {
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("lists observed authorization points and decision coverage", () => {
+  const directory = mkdtempSync(join(tmpdir(), "authfault-list-points-"));
+  try {
+    writeFileSync(join(directory, "package.json"), "{}\n");
+    const result = spawnSync(
+      process.execPath,
+      [
+        resolve("bin/authfault.js"),
+        "list-points",
+        "--",
+        process.execPath,
+        "--test",
+        resolve("test/fixtures/survivor.test.js")
+      ],
+      { cwd: directory, encoding: "utf8" }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /AuthFault authorization points/);
+    assert.match(result.stdout, /custom test command/);
+    assert.match(result.stdout, /reviewed\.ignored-check — allow only/);
+    assert.match(result.stdout, /Missing denied decision coverage/);
+    assert.match(result.stdout, /Test:/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("doctor flags a point spanning several logical operations", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "./bin/authfault.js",
+      "doctor",
+      "--",
+      process.execPath,
+      "--test",
+      "test/fixtures/broad-point.test.js"
+    ],
+    { encoding: "utf8" }
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /shared\.document-viewer — allow \+ deny/);
+  assert.match(result.stdout, /spans 2 logical operations/);
+  assert.match(result.stdout, /document\.download, document\.preview/);
+});
+
+test("release verification requires the tag to match the package version", () => {
+  const matching = spawnSync(process.execPath, ["scripts/verify-release-tag.js"], {
+    encoding: "utf8",
+    env: { ...process.env, AUTHFAULT_RELEASE_TAG: "v0.1.0" }
+  });
+  const mismatching = spawnSync(process.execPath, ["scripts/verify-release-tag.js"], {
+    encoding: "utf8",
+    env: { ...process.env, AUTHFAULT_RELEASE_TAG: "v0.2.0" }
+  });
+
+  assert.equal(matching.status, 0, matching.stderr);
+  assert.match(matching.stdout, /matches package version 0\.1\.0/);
+  assert.equal(mismatching.status, 1);
+  assert.match(mismatching.stderr, /does not match package version tag/);
 });
 
 test("supports the plain-language fail-on-gap alias", () => {

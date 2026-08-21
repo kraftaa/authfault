@@ -48,7 +48,11 @@ if (args[0] === "init") {
 }
 
 if (args[0] === "doctor") {
-  process.exit(runDoctor());
+  process.exit(runDoctor({ commandArgs: args.slice(1), listPoints: false }));
+}
+
+if (["list-points", "--list-points"].includes(args[0])) {
+  process.exit(runDoctor({ commandArgs: args.slice(1), listPoints: true }));
 }
 
 const separator = args.indexOf("--");
@@ -506,8 +510,8 @@ function defaultTestCommand() {
   return [process.platform === "win32" ? "npm.cmd" : "npm", "test"];
 }
 
-function runDoctor() {
-  console.log("AuthFault doctor\n");
+function runDoctor({ commandArgs, listPoints }) {
+  console.log(listPoints ? "AuthFault authorization points\n" : "AuthFault doctor\n");
   let packageJson;
   try {
     packageJson = JSON.parse(readFileSync("package.json", "utf8"));
@@ -517,17 +521,31 @@ function runDoctor() {
     return 1;
   }
 
-  if (!packageJson.scripts?.test) {
+  let customCommand = null;
+  if (commandArgs.length > 0) {
+    if (commandArgs[0] !== "--" || commandArgs.length === 1) {
+      console.log("✗ pass a custom test command after --");
+      return 1;
+    }
+    customCommand = commandArgs.slice(1);
+  }
+
+  if (!packageJson.scripts?.test && !customCommand) {
     console.log("✗ package.json has no test script");
     return 1;
   }
-  console.log(`✓ test command found: ${packageJson.scripts.test}`);
+  console.log(
+    customCommand
+      ? `✓ custom test command: ${customCommand.join(" ")}`
+      : `✓ test command found: ${packageJson.scripts.test}`
+  );
 
-  const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
-  const runner = dependencies.vitest
-    ? "Vitest"
-    : packageJson.scripts.test.includes("node --test")
-      ? "node:test"
+  const commandText = customCommand?.join(" ") ?? packageJson.scripts.test;
+  const runner = commandText.includes("--test")
+    ? "node:test"
+    : commandText.includes("vitest") ||
+        ({ ...packageJson.dependencies, ...packageJson.devDependencies }).vitest
+      ? "Vitest"
       : "custom test runner";
   console.log(`✓ test runner detected: ${runner}`);
 
@@ -540,7 +558,7 @@ function runDoctor() {
   try {
     let command;
     try {
-      command = defaultTestCommand();
+      command = discoveryCommand(commandArgs);
     } catch (error) {
       console.log(`✗ ${error.message}`);
       return 1;
@@ -569,7 +587,7 @@ function runDoctor() {
       return 1;
     }
 
-    const points = [...new Set(events.map((event) => event.id))];
+    const points = summarizePoints(events);
     const attributed = events.filter((event) => event.testId).length;
     console.log(`✓ observed ${events.length} authorization decision(s) at ${points.length} point(s)`);
     if (attributed === events.length) {
@@ -577,10 +595,65 @@ function runDoctor() {
     } else {
       console.log(`△ ${events.length - attributed} decision(s) are not attributed to a test; mutation runs may rerun the full suite`);
     }
-    console.log("\nReady: run npx authfault");
+
+    printObservedPoints(points, events, listPoints);
+    if (!listPoints) console.log("\nReady: run npx authfault");
     return 0;
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+function discoveryCommand(commandArgs) {
+  if (commandArgs.length === 0) return defaultTestCommand();
+  if (commandArgs[0] !== "--" || commandArgs.length === 1) {
+    throw new Error("pass a custom test command after --");
+  }
+  return commandArgs.slice(1);
+}
+
+function printObservedPoints(points, events, includeTests) {
+  console.log("\nObserved points:");
+  for (const point of points) {
+    const tests = [...new Set([...point.allowTests, ...point.denyTests])];
+    const operations = [...new Set(
+      events
+        .filter((event) => event.id === point.id && event.operationName)
+        .map((event) => event.operationName)
+    )].sort();
+    const coverage = point.allowCount > 0 && point.denyCount > 0
+      ? "allow + deny"
+      : point.allowCount > 0
+        ? "allow only"
+        : "deny only";
+    const marker = coverage === "allow + deny" ? "✓" : "△";
+
+    console.log(
+      `${marker} ${point.id} — ${coverage}; ${point.allowCount} allow, ${point.denyCount} deny; ${tests.length} attributed test(s)`
+    );
+    if (coverage !== "allow + deny") {
+      console.log(
+        `  Missing ${point.allowCount === 0 ? "allowed" : "denied"} decision coverage.`
+      );
+    }
+    if (operations.length > 1) {
+      console.log(
+        `  Review point ID: it spans ${operations.length} logical operations (${operations.join(", ")}).`
+      );
+    } else if (tests.length >= 5) {
+      console.log(
+        `  Review point ID: it spans ${tests.length} tests and may represent more than one logical boundary.`
+      );
+    }
+    if (includeTests) {
+      if (operations.length > 0) console.log(`  Operations: ${operations.join(", ")}`);
+      for (const testId of tests) console.log(`  Test: ${testId}`);
+      if (point.unattributedAllowCount + point.unattributedDenyCount > 0) {
+        console.log(
+          `  Unattributed: ${point.unattributedAllowCount + point.unattributedDenyCount} decision(s)`
+        );
+      }
+    }
   }
 }
 
@@ -610,10 +683,10 @@ function printSetupGuide() {
     ...packageJson.dependencies,
     ...packageJson.devDependencies
   };
-  const runner = dependencies.vitest
-    ? "Vitest"
-    : packageJson.scripts?.test?.includes("node --test")
-      ? "node:test"
+  const runner = packageJson.scripts?.test?.includes("node --test")
+    ? "node:test"
+    : dependencies.vitest
+      ? "Vitest"
       : "your existing test command";
 
   const integration = dependencies["@openfga/sdk"]
@@ -663,6 +736,7 @@ function printHelp() {
   authfault
   authfault init
   authfault doctor
+  authfault list-points
   authfault [options] -- <test command> [arguments]
 
 With no command, AuthFault runs npm test.
@@ -689,5 +763,6 @@ Example:
   authfault
   authfault init
   authfault doctor
+  authfault list-points -- node --test
   authfault --reset-command '["npm","run","test:reset"]' -- node --test`);
 }

@@ -24,4 +24,5 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run demo:express
+      - run: npm run demo:openfga
       - run: npm pack --dry-run
