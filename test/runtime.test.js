@@ -7,7 +7,8 @@ import { test } from "node:test";
 import {
   authfaultOperation,
   environment,
-  instrumentAuthorizer
+  instrumentAuthorizer,
+  instrumentOpenFgaClient
 } from "../src/index.js";
 import { runInTestContext } from "../src/test-context.js";
 
@@ -40,6 +41,78 @@ test("forces a matching decision and preserves object results", async () => {
   } finally {
     restoreEnvironment(environment.mutation, previous);
   }
+});
+
+test("instruments a reusable OpenFGA client without changing check call sites", async () => {
+  class FakeOpenFgaClient {
+    constructor() {
+      this.storeId = "store-1";
+    }
+
+    async check(request, options) {
+      return {
+        allowed: request.user === "user:alice",
+        resolution: options?.consistency ?? "default"
+      };
+    }
+
+    getStoreId() {
+      return this.storeId;
+    }
+  }
+
+  const original = new FakeOpenFgaClient();
+  const client = instrumentOpenFgaClient({ client: original });
+
+  assert.deepEqual(
+    await client.check(
+      { user: "user:alice", relation: "viewer", object: "document:roadmap" },
+      { consistency: "higher-consistency" }
+    ),
+    { allowed: true, resolution: "higher-consistency" }
+  );
+  assert.equal(client.getStoreId(), "store-1");
+});
+
+test("mutates OpenFGA checks using a stable type-and-relation point id", async () => {
+  const previous = process.env[environment.mutation];
+  process.env[environment.mutation] = JSON.stringify({
+    id: "openfga.document.viewer",
+    decision: "deny"
+  });
+
+  try {
+    const client = instrumentOpenFgaClient({
+      client: {
+        check: async () => ({ allowed: true, source: "openfga" })
+      }
+    });
+    const result = await client.check({
+      user: "user:secret-user-id",
+      relation: "viewer",
+      object: "document:secret-document-id"
+    });
+
+    assert.deepEqual(result, { allowed: false, source: "openfga" });
+  } finally {
+    restoreEnvironment(environment.mutation, previous);
+  }
+});
+
+test("supports custom OpenFGA point ids and validates adapter input", async () => {
+  const client = instrumentOpenFgaClient({
+    client: { check: async () => ({ allowed: false }) },
+    id: request => `permissions.${request.relation}`
+  });
+  assert.deepEqual(
+    await client.check({ user: "user:a", relation: "editor", object: "doc:1" }),
+    { allowed: false }
+  );
+
+  assert.throws(
+    () => instrumentOpenFgaClient({ client: {} }),
+    /requires a client with a check function/
+  );
 });
 
 test("refuses direct runtime mutation in production", async () => {

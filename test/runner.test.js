@@ -146,8 +146,32 @@ test("prints a runner-aware setup guide", () => {
 
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Detected: Vitest/);
+  assert.match(result.stdout, /no files changed/);
   assert.match(result.stdout, /instrumentAuthorizer/);
+  assert.match(result.stdout, /authfault doctor/);
   assert.match(result.stdout, /npx authfault/);
+});
+
+test("prints a one-time client wrapper when OpenFGA is detected", () => {
+  const directory = mkdtempSync(join(tmpdir(), "authfault-openfga-init-"));
+  try {
+    writeFileSync(
+      join(directory, "package.json"),
+      `${JSON.stringify({ dependencies: { "@openfga/sdk": "latest" } })}\n`
+    );
+    const cli = resolve("bin/authfault.js");
+    const result = spawnSync(process.execPath, [cli, "init"], {
+      cwd: directory,
+      encoding: "utf8"
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /instrumentOpenFgaClient/);
+    assert.match(result.stdout, /Existing fga\.check\(\.\.\.\) calls stay unchanged/);
+    assert.match(result.stdout, /cannot discover code paths/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("supports the plain-language fail-on-gap alias", () => {

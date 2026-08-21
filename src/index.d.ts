@@ -81,6 +81,28 @@ export function instrumentAuthorizer<Args extends unknown[], Result>(options: {
   denialErrors?: undefined;
 }): (...args: Args) => Promise<Result>;
 
+export interface OpenFgaCheckRequest {
+  user: string;
+  relation: string;
+  object: string;
+  context?: Record<string, unknown>;
+  contextualTuples?: unknown;
+}
+
+export interface OpenFgaCheckResult {
+  allowed: boolean;
+  [key: string]: unknown;
+}
+
+export function instrumentOpenFgaClient<
+  Client extends {
+    check(...args: any[]): Awaitable<{ allowed: boolean }>;
+  }
+>(options: {
+  client: Client;
+  id?: string | ((request: Parameters<Client["check"]>[0]) => string);
+}): Client;
+
 export function authfaultOperation<Result>(
   name: string,
   callback: () => Result

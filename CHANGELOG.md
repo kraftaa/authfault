@@ -17,6 +17,8 @@ versioning after its first public release.
 - Multi-layer compensating-control correlation.
 - Clean consumer-package installation verification.
 - Multi-tenant service and Express HTTP examples.
+- One-time OpenFGA client instrumentation that preserves existing `check`
+  call sites.
 
 ### Security
 

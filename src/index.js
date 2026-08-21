@@ -171,6 +171,97 @@ export function instrumentAuthorizer({
   };
 }
 
+/**
+ * Instrument one reusable OpenFGA client without changing its check call sites.
+ * Only `check` is wrapped; every other method is forwarded to the original
+ * client with its receiver preserved.
+ */
+export function instrumentOpenFgaClient({ client, id }) {
+  if (
+    client === null ||
+    (typeof client !== "object" && typeof client !== "function") ||
+    typeof client.check !== "function"
+  ) {
+    throw new TypeError(
+      "instrumentOpenFgaClient requires a client with a check function"
+    );
+  }
+  if (id !== undefined && typeof id !== "string" && typeof id !== "function") {
+    throw new TypeError(
+      "instrumentOpenFgaClient id must be a non-empty string or a request resolver"
+    );
+  }
+  if (typeof id === "string" && id.trim() === "") {
+    throw new TypeError(
+      "instrumentOpenFgaClient id must be a non-empty string or a request resolver"
+    );
+  }
+
+  const originalCheck = client.check;
+  const instrumentedChecks = new Map();
+  const boundMethods = new Map();
+  const resolveId = typeof id === "function"
+    ? id
+    : typeof id === "string"
+      ? () => id.trim()
+      : defaultOpenFgaPointId;
+
+  const check = async (...args) => {
+    const pointId = resolveId(args[0]);
+    if (typeof pointId !== "string" || pointId.trim() === "") {
+      throw new TypeError(
+        "instrumentOpenFgaClient id resolver must return a non-empty string"
+      );
+    }
+
+    const normalizedId = pointId.trim();
+    let instrumented = instrumentedChecks.get(normalizedId);
+    if (!instrumented) {
+      instrumented = instrumentAuthorizer({
+        id: normalizedId,
+        authorize: (...checkArgs) => Reflect.apply(originalCheck, client, checkArgs)
+      });
+      instrumentedChecks.set(normalizedId, instrumented);
+    }
+    return instrumented(...args);
+  };
+
+  return new Proxy(client, {
+    get(target, property) {
+      if (property === "check") return check;
+
+      const value = Reflect.get(target, property, target);
+      if (typeof value !== "function") return value;
+      if (!boundMethods.has(property)) {
+        boundMethods.set(property, value.bind(target));
+      }
+      return boundMethods.get(property);
+    }
+  });
+}
+
+function defaultOpenFgaPointId(request) {
+  if (
+    request === null ||
+    typeof request !== "object" ||
+    typeof request.object !== "string" ||
+    request.object.trim() === "" ||
+    typeof request.relation !== "string" ||
+    request.relation.trim() === ""
+  ) {
+    throw new TypeError(
+      "OpenFGA check requests require non-empty object and relation strings"
+    );
+  }
+
+  const objectType = request.object.split(":", 1)[0];
+  return `openfga.${sanitizePointIdPart(objectType)}.${sanitizePointIdPart(request.relation)}`;
+}
+
+function sanitizePointIdPart(value) {
+  return value.trim().replace(/[^a-zA-Z0-9_.-]+/g, "_");
+}
+
 const defaultDecisionCodec = Object.freeze({
   read: (result, { id }) => readAllowed(result, id),
   write: writeAllowed

@@ -1,17 +1,22 @@
 # authfault
 
-`authfault` injects faults into authorization decisions during tests. Its
-question is deliberately narrow:
+`authfault` mutation-tests the authorization decisions your existing tests
+exercise. Its question is deliberately narrow:
 
 > Would this test suite fail if an observed authorization decision were wrong?
 
 It does **not** prove that an application is secure, discover missing checks, or
 replace API security testing.
 
-In plain language: **AuthFault checks whether your application actually obeys
-its authorization decisions.** It deliberately changes an observed `allow` to
-`deny` (and `deny` to `allow`) while testing. If the tests still pass, that
-decision is not protected by the current test suite.
+In plain language: **AuthFault tests whether the authorization controls you
+already have are actually enforced and tested.** It deliberately changes an
+observed `allow` to `deny` (and `deny` to `allow`) while testing. If the tests
+still pass, that decision is not protected by the current test suite.
+
+> [!IMPORTANT]
+> AuthFault can only test authorization decisions that pass through an
+> instrumented boundary. It cannot discover an operation that never calls an
+> authorizer—the absence of a check produces no decision to mutate.
 
 ## Quick start
 
@@ -25,11 +30,15 @@ Install AuthFault in a Node.js project:
 npm install --save-dev authfault
 ```
 
-Ask for a setup guide tailored to the detected test runner:
+Print a setup guide tailored to the detected test runner or OpenFGA SDK:
 
 ```sh
 npx authfault init
 ```
+
+`init` only prints guidance; it does not edit the application. Instrument one
+central authorization boundary using either of the patterns below. This is the
+required integration step.
 
 After wrapping the authorizer as shown below, verify that the tests observe it:
 
@@ -86,6 +95,46 @@ const authorize = instrumentAuthorizer({
 ```
 
 The function may return a boolean or an object containing an `allowed` boolean.
+
+### OpenFGA: wrap the client once
+
+If the application reuses one OpenFGA client, wrap it where that client is
+created. Existing `client.check(...)` call sites do not need to change:
+
+```js
+import { OpenFgaClient } from "@openfga/sdk";
+import { instrumentOpenFgaClient } from "authfault";
+
+export const fga = instrumentOpenFgaClient({
+  client: new OpenFgaClient({
+    apiUrl: process.env.FGA_API_URL,
+    storeId: process.env.FGA_STORE_ID,
+    authorizationModelId: process.env.FGA_MODEL_ID
+  })
+});
+
+// Unchanged elsewhere in the application:
+const result = await fga.check({
+  user: "user:anne",
+  relation: "viewer",
+  object: "document:roadmap"
+});
+```
+
+By default, that request is grouped under the stable point ID
+`openfga.document.viewer`. User and object identifiers are not included in the
+point ID or trace. To align IDs with domain operations, pass an `id` string or
+resolver:
+
+```js
+const fga = instrumentOpenFgaClient({
+  client,
+  id: request => `permissions.${request.object.split(":")[0]}.${request.relation}`
+});
+```
+
+Only `check` is instrumented. Other client properties and methods are forwarded
+to the original client. AuthFault does not add `@openfga/sdk` as a dependency.
 
 ### Cedar and structured decisions
 
@@ -379,7 +428,8 @@ optional operation correlation IDs—not authorizer arguments or request bodies.
 
 - Targeted reruns currently require the `node:test` or Vitest attribution
   helper.
-- Missing authorization calls cannot be discovered.
+- Missing authorization calls cannot be discovered. An operation that never
+  invokes an instrumented authorizer is invisible to AuthFault.
 - Logical enforcement points require explicit stable IDs.
 - Reset commands are local executables with an argument array; shell syntax is
   intentionally not interpreted.

@@ -3,6 +3,7 @@ import {
   decisionCodecs,
   environment,
   instrumentAuthorizer,
+  instrumentOpenFgaClient,
   type DecisionCodec
 } from "authfault";
 import { authfaultTest as nodeTest } from "authfault/node-test";
@@ -75,6 +76,26 @@ const operationResult: Promise<number> = authfaultOperation(
   async () => 42
 );
 
+class TypedOpenFgaClient {
+  check(request: { user: string; relation: string; object: string }) {
+    return Promise.resolve({ allowed: true, requestId: request.object });
+  }
+
+  stores() {
+    return Promise.resolve(["store-1"]);
+  }
+}
+const openFgaClient: TypedOpenFgaClient = instrumentOpenFgaClient({
+  client: new TypedOpenFgaClient(),
+  id: request => `openfga.document.${request.relation}`
+});
+const openFgaResult: Promise<{ allowed: boolean; requestId: string }> =
+  openFgaClient.check({
+    user: "user:alice",
+    relation: "viewer",
+    object: "document:roadmap"
+  });
+
 nodeTest("typed node test", async context => {
   context.diagnostic(environment.mutation);
 });
@@ -86,6 +107,7 @@ void booleanResult;
 void objectResult;
 void guardResult;
 void operationResult;
+void openFgaResult;
 
 // @ts-expect-error Structured decisions require a decision codec.
 instrumentAuthorizer({

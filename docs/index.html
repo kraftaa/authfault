@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#0d0f0e">
-    <meta name="description" content="AuthFault injects faults into authorization decisions to prove your test suite catches broken enforcement.">
+    <meta name="description" content="AuthFault mutation-tests the authorization controls your tests already exercise.">
     <meta property="og:title" content="AuthFault — Break authorization on purpose">
     <meta property="og:description" content="Authorization fault injection for Node.js test suites.">
     <title>AuthFault — Break authorization on purpose</title>
@@ -30,9 +30,9 @@
     <main id="main">
       <section class="hero" id="top">
         <div class="hero-copy">
-          <div class="eyebrow"><span></span> Authorization mutation testing for Node.js</div>
+          <div class="eyebrow"><span></span> Mutation testing for existing authorization controls</div>
           <h1>Break authorization.<br><em>Prove your tests care.</em></h1>
-          <p class="hero-lede">AuthFault checks whether your application actually obeys its authorization decisions—by deliberately changing them during tests.</p>
+          <p class="hero-lede">AuthFault changes observed authorization decisions during tests, then checks whether your application and assertions notice.</p>
           <div class="hero-actions">
             <a class="button primary" href="#quickstart">Run your first fault <span aria-hidden="true">→</span></a>
             <a class="button secondary" href="https://github.com/kraftaa/authfault">View on GitHub</a>
@@ -75,6 +75,11 @@
         </div>
       </section>
 
+      <section class="scope-strip" aria-label="AuthFault scope">
+        <p><b>What it tests</b><span>Decisions from authorization controls you instrument and your tests exercise.</span></p>
+        <p><b>What it cannot see</b><span>An operation that never calls an authorizer. No decision means nothing to mutate.</span></p>
+      </section>
+
       <section class="thesis" aria-labelledby="thesis-title">
         <p class="section-kicker">The uncomfortable question</p>
         <h2 id="thesis-title">Your policy may be correct.<br>Your application might still <em>ignore it.</em></h2>
@@ -102,7 +107,7 @@
       <section class="steps" id="how-it-works" aria-labelledby="steps-title">
         <div class="section-heading">
           <div><p class="section-kicker">How it works</p><h2 id="steps-title">Three steps. One hard answer.</h2></div>
-          <p>Instrument your authorization boundary once. AuthFault observes decisions, creates targeted faults, and reruns only the tests that touched them.</p>
+          <p>Instrument a central authorization boundary once. AuthFault observes its decisions, creates targeted faults, and reruns only the tests that touched them.</p>
         </div>
         <ol class="step-grid">
           <li>
@@ -129,16 +134,17 @@
       <section class="quickstart" id="quickstart" aria-labelledby="quickstart-title">
         <div class="quickstart-copy">
           <p class="section-kicker">Quick start</p>
-          <h2 id="quickstart-title">One wrapper.<br>Your same test suite.</h2>
-          <p>Keep your authorizer and your test runner. Setup is one wrapper, a quick check, and one command.</p>
+          <h2 id="quickstart-title">Instrument once.<br>Then run.</h2>
+          <p>Keep your authorizer and test runner. The required integration is wrapping one central boundary; <code>init</code> prints guidance but does not edit your code.</p>
           <div class="install-steps">
             <div><b>1</b><code>npm i -D authfault</code></div>
-            <div><b>2</b><code>npx authfault init</code></div>
-            <div><b>3</b><code>npx authfault doctor</code></div>
-            <div><b>4</b><code>npx authfault</code></div>
+            <div><b>2</b><code>npx authfault init</code><small>setup guide</small></div>
+            <div><b>3</b><code>wrap one shared boundary</code><small>required</small></div>
+            <div><b>4</b><code>npx authfault doctor</code><small>verify observation</small></div>
+            <div><b>5</b><code>npx authfault</code><small>inject faults</small></div>
           </div>
           <div class="integrations" id="integrations">
-            <span>Cedar</span><span>Amazon AVP</span><span>Express</span><span>node:test</span><span>Vitest</span>
+            <span>OpenFGA</span><span>Cedar</span><span>Amazon AVP</span><span>Express</span><span>node:test</span><span>Vitest</span>
           </div>
         </div>
         <div class="code-card">
@@ -163,7 +169,7 @@
         </div>
         <div class="boundary-list">
           <p><span>✓</span><b>It tells you</b> whether tests detect a wrong observed authorization decision.</p>
-          <p><span>×</span><b>It does not</b> prove your system is secure or discover checks that never run.</p>
+          <p><span>×</span><b>It cannot</b> discover an operation that never calls an authorizer.</p>
         </div>
       </section>
 

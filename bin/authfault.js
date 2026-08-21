@@ -616,26 +616,46 @@ function printSetupGuide() {
       ? "node:test"
       : "your existing test command";
 
-  console.log(`AuthFault setup
+  const integration = dependencies["@openfga/sdk"]
+    ? `1. Wrap the shared OpenFGA client where it is created:
 
-Detected: ${runner}
+   import { OpenFgaClient } from "@openfga/sdk";
+   import { instrumentOpenFgaClient } from "authfault";
 
-1. Wrap the function that returns an authorization decision:
+   export const fga = instrumentOpenFgaClient({
+     client: new OpenFgaClient(openFgaOptions)
+   });
+
+   Existing fga.check(...) calls stay unchanged.`
+    : `1. Wrap the function that returns an authorization decision:
 
    import { instrumentAuthorizer } from "authfault";
 
    export const authorize = instrumentAuthorizer({
      id: "project.delete",
      authorize: realAuthorize
-   });
+   });`;
 
-2. Run your existing tests with authorization faults:
+  console.log(`AuthFault setup guide (no files changed)
+
+Detected: ${runner}
+
+${integration}
+
+2. Confirm that your tests reach the instrumented boundary:
+
+   npx authfault doctor
+
+3. Run your existing tests with authorization faults:
 
    npx authfault
 
 AuthFault uses npm test by default. For another command, use:
 
-   npx authfault -- <test command>`);
+   npx authfault -- <test command>
+
+Scope: AuthFault tests observed decisions. It cannot discover code paths that
+never call an instrumented authorizer.`);
 }
 
 function printHelp() {

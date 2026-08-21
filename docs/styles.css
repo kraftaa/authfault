@@ -38,6 +38,14 @@ h1, h2 { margin: 0; font-weight: 600; letter-spacing: -.055em; line-height: .98;
 h1 { max-width: 650px; font-size: clamp(52px, 5.2vw, 78px); }
 h1 em, h2 em { color: #789600; font-family: Georgia, serif; font-weight: 400; }
 .hero-lede { max-width: 600px; margin: 31px 0; color: #555a55; font-size: 17px; line-height: 1.65; }
+.scope-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #c8c5bc; border-top: 1px solid #c8c5bc; border-bottom: 1px solid #c8c5bc; }
+.scope-strip p { margin: 0; padding: 25px max(30px, calc((100vw - 1120px) / 2)); background: #efede6; }
+.scope-strip p:first-child { padding-right: 45px; }
+.scope-strip p:last-child { padding-left: 45px; }
+.scope-strip b, .scope-strip span { display: block; }
+.scope-strip b { margin-bottom: 7px; font: 700 11px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.scope-strip p:last-child b { color: #a43b31; }
+.scope-strip span { color: var(--muted); font-size: 14px; line-height: 1.5; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .button { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 24px; padding: 0 21px; border: 1px solid var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 500; transition: transform .2s, box-shadow .2s, background .2s; }
 .button:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
@@ -112,6 +120,7 @@ h1 em, h2 em { color: #789600; font-family: Georgia, serif; font-weight: 400; }
 .install-steps div { display: grid; grid-template-columns: 29px 1fr; align-items: center; padding: 11px 0; border-bottom: 1px solid #c7c4b9; }
 .install-steps b { color: #899e30; font: 10px var(--mono); }
 .install-steps code { font: 10px var(--mono); }
+.install-steps small { grid-column: 2; color: #73766f; font: 9px/1.3 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
 .integrations { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; }
 .integrations span { padding: 8px 10px; border: 1px solid #b9b6ac; background: rgba(255,255,255,.24); font-family: var(--mono); font-size: 9px; }
 .code-card { position: relative; background: #111412; color: #daddd5; box-shadow: 10px 10px 0 #c2bfaf; font-family: var(--mono); }
@@ -175,6 +184,8 @@ footer > div { justify-self: end; display: flex; gap: 25px; font-family: var(--m
 }
 
 @media (max-width: 560px) {
+  .scope-strip { grid-template-columns: 1fr; }
+  .scope-strip p, .scope-strip p:first-child, .scope-strip p:last-child { padding: 22px 20px; }
   .site-header { height: 67px; padding: 0 18px; }
   .header-cta { display: none; }
   .hero { padding: 65px 20px 85px; gap: 55px; }
