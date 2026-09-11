@@ -78,6 +78,20 @@ AuthFault runs `npm test` by default. To use another test command:
 npx authfault -- node --test test/authorization.test.js
 ```
 
+For Bun tests, replace the regular `test` import with AuthFault's adapter so
+decisions can be attributed and unrelated tests can be skipped:
+
+```ts
+import { describe, expect } from "bun:test";
+import { authfaultTest as test } from "authfault/bun";
+```
+
+Then run the existing Bun suite explicitly:
+
+```sh
+npx authfault -- bun test
+```
+
 ## 5. Read the result carefully
 
 - `PROTECTED`: the test failed when AuthFault changed the decision.

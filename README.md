@@ -253,6 +253,31 @@ The adapter supports normal callbacks, numeric timeouts, and Vitest test option
 objects. Use the regular Vitest import for `describe`, hooks, and specialized
 APIs such as `test.each`.
 
+For Bun, import the test wrapper from `authfault/bun` and keep `describe`,
+hooks, expectations, and specialized APIs on the regular `bun:test` import:
+
+```ts
+import { describe, expect } from "bun:test";
+import { authfaultTest as test } from "authfault/bun";
+
+describe("project permissions", () => {
+  test("a viewer cannot delete the project", async () => {
+    // test body
+  });
+});
+```
+
+Run it through the normal Bun test command:
+
+```sh
+authfault -- bun test
+```
+
+The Bun adapter supports async, synchronous, done-callback, and numeric-timeout
+tests. Bun does not expose the complete nested suite name to test callbacks, so
+its stable test IDs include the declaration location, for example
+`tests/permissions.test.ts:12::a viewer cannot delete the project`.
+
 ### Throw-on-deny guards
 
 Guard functions are supported when denial errors are identified explicitly:
@@ -442,7 +467,7 @@ optional operation correlation IDs—not authorizer arguments or request bodies.
 
 ## Deliberate MVP constraints
 
-- Targeted reruns currently require the `node:test` or Vitest attribution
+- Targeted reruns currently require the `node:test`, Vitest, or Bun attribution
   helper.
 - Missing authorization calls cannot be discovered. An operation that never
   invokes an instrumented authorizer is invisible to AuthFault.

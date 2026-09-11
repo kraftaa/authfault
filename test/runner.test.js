@@ -163,6 +163,26 @@ test("prints a runner-aware setup guide", () => {
   }
 });
 
+test("detects Bun in the setup guide", () => {
+  const directory = mkdtempSync(join(tmpdir(), "authfault-bun-init-"));
+  try {
+    writeFileSync(
+      join(directory, "package.json"),
+      `${JSON.stringify({ scripts: { test: "bun test" } })}\n`
+    );
+    const cli = resolve("bin/authfault.js");
+    const result = spawnSync(process.execPath, [cli, "init"], {
+      cwd: directory,
+      encoding: "utf8"
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Detected: Bun/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("prints a one-time client wrapper when OpenFGA is detected", () => {
   const directory = mkdtempSync(join(tmpdir(), "authfault-openfga-init-"));
   try {

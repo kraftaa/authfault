@@ -9,7 +9,7 @@ versioning after its first public release.
 
 - Authorization fault injection for boolean, object, guard, Cedar, Amazon
   Verified Permissions, and custom structured decisions.
-- `node:test` and Vitest attribution adapters.
+- `node:test`, Vitest, and Bun attribution adapters.
 - Point-wide and occurrence-level mutations.
 - Survivor review baselines with owners, reasons, and expiration dates.
 - `authfault init`, `authfault doctor`, and default `npm test` execution.

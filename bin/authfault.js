@@ -543,6 +543,8 @@ function runDoctor({ commandArgs, listPoints }) {
   const commandText = customCommand?.join(" ") ?? packageJson.scripts.test;
   const runner = commandText.includes("--test")
     ? "node:test"
+    : /(?:^|\s)bun(?:\s+run)?\s+test(?:\s|$)/u.test(commandText)
+      ? "Bun"
     : commandText.includes("vitest") ||
         ({ ...packageJson.dependencies, ...packageJson.devDependencies }).vitest
       ? "Vitest"
@@ -685,6 +687,8 @@ function printSetupGuide() {
   };
   const runner = packageJson.scripts?.test?.includes("node --test")
     ? "node:test"
+    : /(?:^|\s)bun(?:\s+run)?\s+test(?:\s|$)/u.test(packageJson.scripts?.test ?? "")
+      ? "Bun"
     : dependencies.vitest
       ? "Vitest"
       : "your existing test command";

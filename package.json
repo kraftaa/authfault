@@ -31,6 +31,10 @@
     "./vitest": {
       "types": "./src/vitest.d.ts",
       "import": "./src/vitest.js"
+    },
+    "./bun": {
+      "types": "./src/bun.d.ts",
+      "import": "./src/bun.js"
     }
   },
   "scripts": {

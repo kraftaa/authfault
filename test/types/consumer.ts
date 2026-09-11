@@ -8,6 +8,7 @@ import {
 } from "authfault";
 import { authfaultTest as nodeTest } from "authfault/node-test";
 import { authfaultTest as vitestTest } from "authfault/vitest";
+import { authfaultTest as bunTest } from "authfault/bun";
 import { OpenFgaClient } from "@openfga/sdk";
 
 const booleanAuthorizer = instrumentAuthorizer({
@@ -109,6 +110,12 @@ nodeTest("typed node test", async context => {
 });
 vitestTest("typed Vitest test", { timeout: 1_000 }, ({ expect }) => {
   expect(true).toBe(true);
+});
+bunTest("typed Bun test", async () => {
+  await Promise.resolve();
+}, 1_000);
+bunTest("typed Bun callback test", done => {
+  done();
 });
 
 void booleanResult;
